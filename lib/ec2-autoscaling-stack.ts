@@ -126,6 +126,7 @@ export class Ec2AutoScalingStack extends Construct {
         });
         const certificate = new acm.Certificate(this, 'Certificate', {
             domainName: subDomainName,
+            validation: acm.CertificateValidation.fromDns(props.hostedZone),
         });
 
         const httpsListener = loadBalancer.addListener('HttpsListener', {
