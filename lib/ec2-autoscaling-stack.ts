@@ -32,6 +32,7 @@ interface Ec2AutoScalingStackProps extends cdk.StackProps {
     maxInstanceLifetimeDays: number;
     targetCpuUtilizationPercent: number;
     estimatedTimeToStartInstanceSeconds: number;
+    env?: cdk.Environment;
 }
 
 export class Ec2AutoScalingStack extends Construct {
@@ -43,10 +44,8 @@ export class Ec2AutoScalingStack extends Construct {
             .replace(/{{github_account}}/g, props.github.githubAccountParameterName)
             .replace(/{{personal_access_token}}/g, props.github.githubPersonalAccessTokenParameterName)
             .replace(/{{repo_name}}/g, props.github.repoName)
-            .replace(/{{branch_name}}/g, props.github.branchName);
-        // .replace(/{{AWS::StackName}}/g, this.stackName)
-        // .replace(/{{resourceId}}/g, props.github.branchName)
-        // .replace(/{{aws_region}}/g, props.env.region);
+            .replace(/{{branch_name}}/g, props.github.branchName)
+            .replace(/{{aws_region}}/g, props.env?.region || 'us-east-1');
 
         const instanceSecurityGroup = new ec2.SecurityGroup(this, 'InstanceSecurityGroup', {
             vpc: props.vpc,
@@ -82,8 +81,10 @@ export class Ec2AutoScalingStack extends Construct {
                 timeout: Duration.seconds(props.estimatedTimeToStartInstanceSeconds * 2),
             }),
             init: ec2.CloudFormationInit.fromElements(
-                ec2.InitFile.fromAsset('/etc/bootstrap', './lib/scripts/bootstrap_instance.sh'),
-                ec2.InitFile.fromString('/etc/deploy', deploymentScript)
+                ec2.InitFile.fromAsset('/etc/bootstrap', './lib/scripts/bootstrap_instance.sh', { mode: '000744' }),
+                ec2.InitFile.fromString('/etc/deploy', deploymentScript, { mode: '000744' }),
+                ec2.InitCommand.shellCommand('/etc/bootstrap', { cwd: '~' }),
+                ec2.InitCommand.shellCommand('/etc/deploy', { cwd: '~' })
             ),
         });
 
@@ -119,11 +120,13 @@ export class Ec2AutoScalingStack extends Construct {
 
         const subDomain = `${props.deploymentStage}-api`;
         const subDomainName = `${subDomain}.${props.hostedZone.zoneName}`;
+
         const aRecord = new route53.ARecord(this, `ARecord`, {
             zone: props.hostedZone,
             recordName: subDomain,
             target: route53.RecordTarget.fromAlias(new targets.LoadBalancerTarget(loadBalancer)),
         });
+
         const certificate = new acm.Certificate(this, 'Certificate', {
             domainName: subDomainName,
             validation: acm.CertificateValidation.fromDns(props.hostedZone),
