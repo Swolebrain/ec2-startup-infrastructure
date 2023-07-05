@@ -9,8 +9,8 @@ import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as cdk from 'aws-cdk-lib/core';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import { Construct } from 'constructs';
-import { HealthCheck } from "aws-cdk-lib/aws-elasticloadbalancingv2";
-import { Duration } from "aws-cdk-lib/core";
+import { HealthCheck } from 'aws-cdk-lib/aws-elasticloadbalancingv2';
+import { Duration } from 'aws-cdk-lib/core';
 
 const deploymentScriptBase = fs.readFileSync(path.join(__dirname, 'scripts', 'ec2-deployment.sh'), 'utf8');
 
@@ -27,7 +27,10 @@ interface Ec2AutoScalingStackProps extends cdk.StackProps {
         branchName: string;
     };
     instanceType: string;
+    maxInstanceAmount: number;
+    minInstanceAmount: number;
     maxInstanceLifetimeDays: number;
+    targetCpuUtilizationPercent: number;
     estimatedTimeToStartInstanceSeconds: number;
 }
 
@@ -40,10 +43,10 @@ export class Ec2AutoScalingStack extends Construct {
             .replace(/{{github_account}}/g, props.github.githubAccountParameterName)
             .replace(/{{personal_access_token}}/g, props.github.githubPersonalAccessTokenParameterName)
             .replace(/{{repo_name}}/g, props.github.repoName)
-            .replace(/{{branch_name}}/g, props.github.branchName)
-            // .replace(/{{AWS::StackName}}/g, this.stackName)
-            // .replace(/{{resourceId}}/g, props.github.branchName)
-            // .replace(/{{aws_region}}/g, props.env.region);
+            .replace(/{{branch_name}}/g, props.github.branchName);
+        // .replace(/{{AWS::StackName}}/g, this.stackName)
+        // .replace(/{{resourceId}}/g, props.github.branchName)
+        // .replace(/{{aws_region}}/g, props.env.region);
 
         const instanceSecurityGroup = new ec2.SecurityGroup(this, 'InstanceSecurityGroup', {
             vpc: props.vpc,
@@ -67,8 +70,8 @@ export class Ec2AutoScalingStack extends Construct {
         const autoScalingGroup = new aws_autoscaling.AutoScalingGroup(this, 'AutoScalingGroup', {
             autoScalingGroupName: `${resourceNamePrefix}-ASG`,
             vpc: props.vpc,
-            minCapacity: 1,
-            maxCapacity: 3,
+            minCapacity: props.minInstanceAmount,
+            maxCapacity: props.maxInstanceAmount,
             launchTemplate,
             maxInstanceLifetime: props.maxInstanceLifetimeDays ? Duration.days(props.maxInstanceLifetimeDays) : undefined,
             defaultInstanceWarmup: Duration.seconds(10),
@@ -76,20 +79,17 @@ export class Ec2AutoScalingStack extends Construct {
             groupMetrics: [aws_autoscaling.GroupMetrics.all()],
             signals: aws_autoscaling.Signals.waitForMinCapacity({
                 minSuccessPercentage: 50,
-                timeout: Duration.seconds(props.estimatedTimeToStartInstanceSeconds * 2)
+                timeout: Duration.seconds(props.estimatedTimeToStartInstanceSeconds * 2),
             }),
             init: ec2.CloudFormationInit.fromElements(
                 ec2.InitFile.fromAsset('/etc/bootstrap', './lib/scripts/bootstrap_instance.sh'),
-                ec2.InitFile.fromString('/etc/deploy', deploymentScript),
-            )
+                ec2.InitFile.fromString('/etc/deploy', deploymentScript)
+            ),
         });
 
-        // Add a tag to the Auto Scaling Group
-        const tagKey = 'asg-name';
-        const tagValue = `${props.github.repoName}::${props.github.branchName}`;
-
-        const cfnAutoScalingGroup = autoScalingGroup.node.defaultChild as aws_autoscaling.CfnAutoScalingGroup;
-        cfnAutoScalingGroup.addPropertyOverride('Tags', [{ Key: tagKey, Value: tagValue, PropagateAtLaunch: true }]);
+        autoScalingGroup.scaleOnCpuUtilization(`${resourceNamePrefix}-ASGCpuUtilizationScalingPolicy`, {
+            targetUtilizationPercent: props.targetCpuUtilizationPercent,
+        });
 
         // Create a security group for the load balancer
         const lbSecurityGroup = new ec2.SecurityGroup(this, `${resourceNamePrefix}-LBSG`, {
