@@ -6,13 +6,10 @@ HOME=/home/ec2-user
 
 cd $HOME
 
-github_account=`aws ssm get-parameter --name {{github_account}} --region us-east-1 --query 'Parameter.Value' --output text`
-
-# Personal Access Token
-personal_access_token=`aws ssm get-parameter --name {{personal_access_token}} --region us-east-1 --query 'Parameter.Value' --output text`
+github_account=$(aws ssm get-parameter --name {{github_account}} --region {{aws_region}} --query 'Parameter.Value' --output text)
+personal_access_token=$(aws ssm get-parameter --name {{personal_access_token}} --region {{aws_region}} --query 'Parameter.Value' --output text)
 
 repo_name={{repo_name}}
-
 branch_name={{branch_name}}
 
 if [ ! -d $repo_name ]; then
@@ -34,6 +31,3 @@ npm install
 
 # Start your application or perform other necessary actions
 sudo chown -R $USER:$USER $HOME
-
-# Signal the status from cfn-init\n
-#/opt/aws/bin/cfn-signal -e $? --stack {{AWS::StackName}} --resource {{resourceId}} --region {{aws_region}}
