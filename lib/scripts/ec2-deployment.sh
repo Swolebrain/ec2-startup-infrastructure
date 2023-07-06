@@ -1,10 +1,13 @@
 #!/bin/bash
-
-USER=ec2-user
-
-HOME=/home/ec2-user
+export HOME=/root
 
 cd $HOME
+
+# Access to nvm
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"                   # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" # This loads nvm bash_completion
+nvm use 16
 
 github_account=$(aws ssm get-parameter --name {{github_account}} --region {{aws_region}} --query 'Parameter.Value' --output text)
 personal_access_token=$(aws ssm get-parameter --name {{personal_access_token}} --region {{aws_region}} --query 'Parameter.Value' --output text)
@@ -28,6 +31,3 @@ git reset --hard origin/${branch_name}
 
 # Install any required dependencies or perform additional setup steps
 npm install
-
-# Start your application or perform other necessary actions
-sudo chown -R $USER:$USER $HOME
