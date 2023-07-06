@@ -83,8 +83,7 @@ export class Ec2AutoScalingStack extends Construct {
             init: ec2.CloudFormationInit.fromElements(
                 ec2.InitFile.fromAsset('/etc/bootstrap', './lib/scripts/bootstrap_instance.sh', { mode: '000744' }),
                 ec2.InitFile.fromString('/etc/deploy', deploymentScript, { mode: '000744' }),
-                ec2.InitCommand.shellCommand('/etc/bootstrap', { cwd: '~' }),
-                ec2.InitCommand.shellCommand('/etc/deploy', { cwd: '~' })
+                ec2.InitCommand.shellCommand('/etc/bootstrap && /etc/deploy', { cwd: '~' })
             ),
         });
 
