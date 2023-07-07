@@ -99,6 +99,7 @@ export class Ec2AutoScalingStack extends Construct {
         // Allow incoming traffic on port 80 and 443 from anywhere (adjust as needed)
         lbSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(80));
         lbSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(443));
+        lbSecurityGroup.addIngressRule(ec2.Peer.anyIpv4(), ec2.Port.tcp(8080));
 
         // Create a load balancer
         const loadBalancer = new elbv2.ApplicationLoadBalancer(this, `${resourceNamePrefix}-LB`, {
@@ -138,7 +139,7 @@ export class Ec2AutoScalingStack extends Construct {
 
         httpsListener.addTargets('AutoScalingGroupTargets', {
             targets: [autoScalingGroup],
-            port: 80,
+            port: 8080,
             healthCheck: props.healthCheck,
         });
 
