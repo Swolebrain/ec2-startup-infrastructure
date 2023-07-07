@@ -11,8 +11,8 @@ const globalConfig = {
     deploymentStage: 'staging',
     hostedZoneName: 'burgalveist.millionairecodersclub.com', //change this
     github: {
-        repoName: 'sample-express-app', //change this
-        branchName: 'master', // maybe change this
+        repoName: 'express-starter-app-for-aws', //change this
+        branchName: 'main', // maybe change this
     },
     healthCheckPath: '/', // change this to the relative url of a non-auth protected endpoint in your code package. Consider deep health checks if it fits your use case: https://aws.amazon.com/blogs/networking-and-content-delivery/choosing-the-right-health-check-with-elastic-load-balancing-and-ec2-auto-scaling/
     ec2Instances: {
