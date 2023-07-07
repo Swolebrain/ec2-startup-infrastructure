@@ -59,7 +59,7 @@ export class Ec2AutoScalingStack extends Construct {
         // Create a launch template for EC2 instances
         const launchTemplate = new ec2.LaunchTemplate(this, 'LaunchTemplate', {
             instanceType: new ec2.InstanceType(props.instanceType),
-            machineImage: ec2.MachineImage.latestAmazonLinux2(),
+            machineImage: ec2.MachineImage.latestAmazonLinux2023(),
             securityGroup: instanceSecurityGroup,
             role: instanceRole,
             requireImdsv2: true,
