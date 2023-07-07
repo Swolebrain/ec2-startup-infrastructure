@@ -1,13 +1,6 @@
 #!/bin/bash
-export HOME=/root
-
-cd $HOME
-
-# Access to nvm
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"                   # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" # This loads nvm bash_completion
-nvm use 18
+export USER=ec2-user
+export HOME=/home/$USER
 
 github_account=$(aws ssm get-parameter --name {{github_account}} --region {{aws_region}} --query 'Parameter.Value' --output text)
 personal_access_token=$(aws ssm get-parameter --name {{personal_access_token}} --region {{aws_region}} --query 'Parameter.Value' --output text)
@@ -15,19 +8,36 @@ personal_access_token=$(aws ssm get-parameter --name {{personal_access_token}} -
 repo_name={{repo_name}}
 branch_name={{branch_name}}
 
+# Execute commands as $USER
+sudo -i -u $USER bash <<EOF
+
+cd $HOME
+
+source .bashrc
+nvm use 18
+
+# Initialize github repo on instance
 if [ ! -d $repo_name ]; then
-    # Clone the repository
     git clone https://${github_account}:${personal_access_token}@github.com/${github_account}/${repo_name}.git
 fi
 
-# Change directory to the repository
 cd $repo_name
 
-# Fetch latest changes from the branch
 git fetch origin ${branch_name}
-
-# Reset the repository to the latest commit on the branch
 git reset --hard origin/${branch_name}
 
-# Install any required dependencies or perform additional setup steps
-npm install
+if [ -f "./install_dependencies.sh" ]; then
+    sudo chmod +x ./install_dependencies.sh
+    ./install_dependencies.sh
+fi
+
+if [ -f "./start_server.sh" ]; then
+    sudo chmod +x ./start_server.sh
+    ./start_server.sh
+fi
+
+# Give project ownership to user
+sudo chown -R $USER:$USER $HOME
+
+# End of commands executed as $USER
+EOF
