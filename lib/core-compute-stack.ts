@@ -19,7 +19,14 @@ interface CoreComputeStackProps extends cdk.StackProps {
     };
     hostedZone: route53.IHostedZone;
     healthCheck: HealthCheck;
-    instanceType: string;
+    ec2Instances: {
+        type: string;
+        maxAmount: number;
+        minAmount: number;
+        maxLifetimeDays: number;
+        targetCpuUtilizationPercent: number;
+        estimatedTimeToStartSeconds: number;
+    };
 }
 
 export class CoreComputeStack extends cdk.Stack {
@@ -52,12 +59,12 @@ export class CoreComputeStack extends cdk.Stack {
                 repoName: props.github.repoName,
                 branchName: props.github.branchName,
             },
-            instanceType: props.instanceType,
-            targetCpuUtilizationPercent: 75,
-            maxInstanceLifetimeDays: 1,
-            maxInstanceAmount: 2,
-            minInstanceAmount: 1,
-            estimatedTimeToStartInstanceSeconds: 300,
+            instanceType: props.ec2Instances.type,
+            targetCpuUtilizationPercent: props.ec2Instances.targetCpuUtilizationPercent,
+            maxInstanceLifetimeDays: props.ec2Instances.maxLifetimeDays,
+            maxInstanceAmount: props.ec2Instances.maxAmount,
+            minInstanceAmount: props.ec2Instances.minAmount,
+            estimatedTimeToStartInstanceSeconds: props.ec2Instances.estimatedTimeToStartSeconds,
             env: props.env,
         });
     }
