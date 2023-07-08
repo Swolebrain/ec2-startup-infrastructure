@@ -2,8 +2,8 @@
 # Use this script to set up the pre-requisite installations of your instance
 # for example, the script below sets up the instance to run a nodejs app
 
-export USER=ec2-user
-export HOME=/home/$USER
+USER=ec2-user
+HOME=/home/$USER
 
 sudo yum -y update
 sudo yum install -y aws-cfn-bootstrap

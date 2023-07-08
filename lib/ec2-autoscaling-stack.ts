@@ -12,7 +12,8 @@ import { Construct } from 'constructs';
 import { HealthCheck } from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import { Duration } from 'aws-cdk-lib/core';
 
-const deploymentScriptBase = fs.readFileSync(path.join(__dirname, 'scripts', 'ec2-deployment.sh'), 'utf8');
+const instanceAppDeploymentScriptBase = fs.readFileSync(path.join(__dirname, 'scripts', 'instance_app_deploy.sh'), 'utf8');
+const instanceEnvVarsScriptBase = fs.readFileSync(path.join(__dirname, 'scripts', 'instance_env_vars.sh'), 'utf8');
 
 interface Ec2AutoScalingStackProps extends cdk.StackProps {
     vpc: ec2.Vpc;
@@ -40,7 +41,11 @@ export class Ec2AutoScalingStack extends Construct {
         super(scope, id);
         const resourceNamePrefix = `${props.appName}-${props.deploymentStage}`;
 
-        const deploymentScript = deploymentScriptBase
+        const instanceEnvVarsScript = instanceEnvVarsScriptBase
+            .replace(/{{APP_NAME}}/g, props.appName)
+            .replace(/{{NODE_ENV}}/g, props.deploymentStage);
+
+        const instanceAppDeploymentScript = instanceAppDeploymentScriptBase
             .replace(/{{github_account}}/g, props.github.githubAccountParameterName)
             .replace(/{{personal_access_token}}/g, props.github.githubPersonalAccessTokenParameterName)
             .replace(/{{repo_name}}/g, props.github.repoName)
@@ -81,9 +86,10 @@ export class Ec2AutoScalingStack extends Construct {
                 timeout: Duration.seconds(props.estimatedTimeToStartInstanceSeconds * 2),
             }),
             init: ec2.CloudFormationInit.fromElements(
-                ec2.InitFile.fromAsset('/etc/bootstrap', './lib/scripts/bootstrap_instance.sh', { mode: '000744' }),
-                ec2.InitFile.fromString('/etc/deploy', deploymentScript, { mode: '000744' }),
-                ec2.InitCommand.shellCommand('/etc/bootstrap && /etc/deploy', { cwd: '~' })
+                ec2.InitFile.fromString('/etc/env_vars', instanceEnvVarsScript, { mode: '000744' }),
+                ec2.InitFile.fromAsset('/etc/bootstrap', './lib/scripts/instance_bootstrap.sh', { mode: '000744' }),
+                ec2.InitFile.fromString('/etc/app_deploy', instanceAppDeploymentScript, { mode: '000744' }),
+                ec2.InitCommand.shellCommand('/etc/env_vars && /etc/bootstrap && /etc/app_deploy', { cwd: '~' })
             ),
         });
 

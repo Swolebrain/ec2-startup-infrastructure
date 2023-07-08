@@ -1,6 +1,6 @@
 #!/bin/bash
-export USER=ec2-user
-export HOME=/home/$USER
+USER=ec2-user
+HOME=/home/$USER
 
 github_account=$(aws ssm get-parameter --name {{github_account}} --region {{aws_region}} --query 'Parameter.Value' --output text)
 personal_access_token=$(aws ssm get-parameter --name {{personal_access_token}} --region {{aws_region}} --query 'Parameter.Value' --output text)
