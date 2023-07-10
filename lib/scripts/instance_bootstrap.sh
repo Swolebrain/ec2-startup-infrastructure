@@ -6,7 +6,13 @@ USER=ec2-user
 HOME=/home/$USER
 
 sudo yum -y update
+
 sudo yum install -y aws-cfn-bootstrap
+
+sudo yum install -y amazon-cloudwatch-agent
+sudo amazon-cloudwatch-agent-ctl -a fetch-config -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json
+sudo amazon-cloudwatch-agent-ctl -a start
+
 sudo yum -y install git
 
 sudo yum install curl -y

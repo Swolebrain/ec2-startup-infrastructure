@@ -58,7 +58,10 @@ export class Ec2AutoScalingStack extends Construct {
 
         const instanceRole = new iam.Role(this, 'InstanceRole', {
             assumedBy: new iam.ServicePrincipal('ec2.amazonaws.com'),
-            managedPolicies: [iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMManagedInstanceCore')],
+            managedPolicies: [
+                iam.ManagedPolicy.fromAwsManagedPolicyName('AmazonSSMManagedInstanceCore'),
+                iam.ManagedPolicy.fromAwsManagedPolicyName('CloudWatchAgentServerPolicy'),
+            ],
         });
 
         // Create a launch template for EC2 instances
@@ -86,10 +89,15 @@ export class Ec2AutoScalingStack extends Construct {
                 timeout: Duration.seconds(props.estimatedTimeToStartInstanceSeconds * 2),
             }),
             init: ec2.CloudFormationInit.fromElements(
-                ec2.InitFile.fromString('/etc/env_vars', instanceEnvVarsScript, { mode: '000744' }),
-                ec2.InitFile.fromAsset('/etc/bootstrap', './lib/scripts/instance_bootstrap.sh', { mode: '000744' }),
-                ec2.InitFile.fromString('/etc/app_deploy', instanceAppDeploymentScript, { mode: '000744' }),
-                ec2.InitCommand.shellCommand('/etc/env_vars && /etc/bootstrap && /etc/app_deploy', { cwd: '~' })
+                ec2.InitFile.fromAsset(
+                    '/opt/aws/amazon-cloudwatch-agent/bin/config.json',
+                    './lib/config/amazon_cloudwatch_agent_default_config.json',
+                    { mode: '000644' }
+                ),
+                ec2.InitFile.fromString('/etc/instance_env_vars', instanceEnvVarsScript, { mode: '000744' }),
+                ec2.InitFile.fromAsset('/etc/instance_bootstrap', './lib/scripts/instance_bootstrap.sh', { mode: '000744' }),
+                ec2.InitFile.fromString('/etc/instance_app_deploy', instanceAppDeploymentScript, { mode: '000744' }),
+                ec2.InitCommand.shellCommand('/etc/instance_env_vars && /etc/instance_bootstrap && /etc/instance_app_deploy', { cwd: '~' })
             ),
         });
 
