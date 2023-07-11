@@ -1,16 +1,16 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-import { aws_route53_targets as targets, aws_autoscaling } from 'aws-cdk-lib';
+import { aws_autoscaling, aws_route53_targets as targets } from 'aws-cdk-lib';
 import * as acm from 'aws-cdk-lib/aws-certificatemanager';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as elbv2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
+import { HealthCheck } from 'aws-cdk-lib/aws-elasticloadbalancingv2';
+import * as iam from 'aws-cdk-lib/aws-iam';
 import * as route53 from 'aws-cdk-lib/aws-route53';
 import * as cdk from 'aws-cdk-lib/core';
-import * as iam from 'aws-cdk-lib/aws-iam';
-import { Construct } from 'constructs';
-import { HealthCheck } from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import { Duration } from 'aws-cdk-lib/core';
+import { Construct } from 'constructs';
 
 const instanceAppDeploymentScriptBase = fs.readFileSync(path.join(__dirname, 'scripts', 'instance_app_deploy.sh'), 'utf8');
 const instanceEnvVarsScriptBase = fs.readFileSync(path.join(__dirname, 'scripts', 'instance_env_vars.sh'), 'utf8');
@@ -77,6 +77,9 @@ export class Ec2AutoScalingStack extends Construct {
         const autoScalingGroup = new aws_autoscaling.AutoScalingGroup(this, 'AutoScalingGroup', {
             autoScalingGroupName: `${resourceNamePrefix}-ASG`,
             vpc: props.vpc,
+            healthCheck: aws_autoscaling.HealthCheck.elb({
+                grace: Duration.seconds(props.estimatedTimeToStartInstanceSeconds * 2),
+            }),
             minCapacity: props.minInstanceAmount,
             maxCapacity: props.maxInstanceAmount,
             launchTemplate,
